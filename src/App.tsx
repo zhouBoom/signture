@@ -114,7 +114,7 @@ function App() {
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
  <div className="flex flex-col gap-6">
  <Card title="签名输入区域" icon="📝">
- <SignatureCanvas onSignatureChange={handleSignatureChange} onClear={handleClear}/>
+ <SignatureCanvas onSignatureChange={handleSignatureChange} onClear={handleClear} signatureData={signatureData}/>
  </Card>
  <Card title="验证参数" icon="⚙️">
  <div className="space-y-6">

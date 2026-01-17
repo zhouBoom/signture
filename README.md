@@ -9,47 +9,64 @@
 - 📊 **实时反馈**：验证结果即时显示
 - ⚙️ **参数配置**：可调节匹配阈值和验证模式
 - 📋 **历史记录**：展示最近验证记录
+- 🎨 **现代化UI**：使用 Tailwind CSS 构建响应式界面
+- 💯 **Retina支持**：Canvas 在高分屏上清晰显示
+- ⚡ **高性能**：基于 requestAnimationFrame 的流畅绘图架构
 
 ## 技术栈
 
-- **HTML5** - 页面结构
-- **CSS3** - 样式设计
-- **JavaScript** - 交互功能
+- **React 19** - 前端框架
+- **TypeScript** - 类型安全
+- **Tailwind CSS 4.x** - 实用优先的CSS框架
+- **Vite** - 构建工具和开发服务器
 - **Canvas API** - 签名绘制
 
 ## 快速开始
 
-### 本地运行
+### 前置要求
 
-1. 克隆或下载项目到本地：
-   ```bash
-   git clone <repository-url>
-   ```
+- Node.js 18+
+- npm 或 yarn
 
-2. 进入项目目录：
-   ```bash
-   cd project-folder
-   ```
-
-3. 在浏览器中直接打开 `src/pages/index.html` 文件即可使用：
-   ```bash
-   # 使用默认浏览器打开
-   open src/pages/index.html  # macOS
-   start src/pages/index.html  # Windows
-   xdg-open src/pages/index.html  # Linux
-   ```
-
-### 或使用本地服务器
+### 安装依赖
 
 ```bash
-# 使用 Python 3
-python -m http.server 8000
+# 使用 npm
+npm install
 
-# 使用 Node.js
-npx serve
+# 或使用 yarn
+yarn install
 ```
 
-然后在浏览器中访问 `http://localhost:8000/src/pages/index.html`
+### 本地运行
+
+```bash
+npm run dev
+```
+
+开发服务器将在 `http://localhost:5173` 启动（Vite 默认端口）。
+
+### 构建生产版本
+
+```bash
+npm run build
+```
+
+构建产物将生成在 `dist` 目录中。
+
+### 预览生产构建
+
+```bash
+npm run preview
+```
+
+### 类型检查
+
+```bash
+npm run typecheck
+```
+
+运行 TypeScript 类型检查，确保代码类型安全。
 
 ## 使用说明
 
@@ -63,18 +80,66 @@ npx serve
 ```
 project-folder/
 ├─ src/
-│  ├─ pages/
-│  │  └─ index.html        # 主页面
-│  ├─ styles/
-│  │  └─ main.css          # 样式文件
-└─ README.md               # 项目说明
+│  ├─ components/          # React 组件
+│  │  ├─ SignatureCanvas.tsx  # 签名画布组件（核心）
+│  │  ├─ Header.tsx        # 头部组件
+│  │  ├─ Footer.tsx        # 页脚组件
+│  │  ├─ MainContent.tsx   # 主内容组件
+│  │  └─ Toast.tsx         # 通知组件
+│  ├─ types/               # TypeScript 类型定义
+│  │  └─ index.ts
+│  ├─ App.tsx              # 根组件
+│  ├─ main.tsx             # 应用入口
+│  └─ index.css            # 全局样式（Tailwind 入口）
+├─ public/                 # 静态资源
+├─ index.html              # HTML 模板
+├─ vite.config.js          # Vite 配置（集成 Tailwind 4.x）
+├─ tsconfig.json           # TypeScript 配置
+├─ tailwind.config.js      # Tailwind CSS 配置
+├─ postcss.config.js       # PostCSS 配置（@tailwindcss/postcss）
+└─ package.json            # 项目配置
 ```
+
+## 核心技术实现
+
+### 高性能绘图架构
+
+签名画布组件采用以下优化策略：
+
+1. **requestAnimationFrame 渲染**：使用浏览器原生动画帧 API 实现流畅绘制
+2. **批量点处理**：对 pending points 进行批量处理，减少渲染次数
+3. **曲线平滑**：使用 `quadraticCurveTo` 方法实现更平滑的曲线绘制
+4. **状态管理**：使用 React hooks (`useRef`, `useEffect`, `useCallback`) 优化性能
+
+### Retina/高分屏支持
+
+```typescript
+// 获取设备像素比
+const pixelRatio = window.devicePixelRatio || 1;
+
+// 设置 Canvas 实际尺寸
+canvas.width = canvas.clientWidth * pixelRatio;
+canvas.height = canvas.clientHeight * pixelRatio;
+
+// 应用缩放
+ctx.scale(pixelRatio, pixelRatio);
+```
+
+通过动态调整 Canvas 尺寸和上下文缩放比例，确保在高分屏上的清晰度。
+
+### Tailwind CSS 4.x 配置
+
+项目使用最新的 Tailwind CSS 4.x，需要注意以下配置：
+
+1. **Vite 插件**：在 `vite.config.js` 中添加 `@tailwindcss/vite` 插件
+2. **PostCSS 配置**：使用 `@tailwindcss/postcss` 替代旧的 `tailwindcss` 插件
+3. **CSS 语法**：在 `index.css` 中使用 `@reference tailwindcss;` 引入 Tailwind
 
 ## 浏览器兼容性
 
-- Chrome/Edge 80+
-- Firefox 75+
-- Safari 13+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
 
 ## License
 

@@ -1,13 +1,15 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Point, Stroke, SignatureData } from '../types';
 import { getDevicePixelRatio, calculateDistance } from '../utils/helpers';
+import useSignatureReplay from '../hooks/useSignatureReplay';
 
 interface SignatureCanvasProps {
   onSignatureChange: (data: SignatureData) => void;
   onClear: () => void;
+  signatureData: SignatureData | null;
 }
 
-const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, onClear }) => {
+const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, onClear, signatureData }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -19,6 +21,17 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
   const [totalDistance, setTotalDistance] = useState(0);
   const dpr = useRef(getDevicePixelRatio());
   
+  const {
+    isPlaying,
+    isPaused,
+    currentSpeed,
+    progress,
+    play,
+    pause,
+    reset,
+    setSpeed
+  } = useSignatureReplay(canvasRef, signatureData);
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -28,12 +41,13 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     const width = rect.width;
     const height = 300;
     
-    canvas.width = width * dpr.current;
-    canvas.height = height * dpr.current;
+    const currentDpr = dpr.current;
+    canvas.width = width * currentDpr;
+    canvas.height = height * currentDpr;
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.scale(dpr.current, dpr.current);
+      ctx.scale(currentDpr, currentDpr);
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -42,14 +56,10 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     
     return () => {
       if (ctx) {
-        ctx.scale(1 / dpr.current, 1 / dpr.current);
+        ctx.scale(1 / currentDpr, 1 / currentDpr);
       }
     };
   }, [dpr]);
-  
-  useEffect(() => {
-    redrawCanvas();
-  }, [strokes, currentStroke]);
   
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -92,10 +102,14 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     }
   }, [strokes, currentStroke]);
   
+  useEffect(() => {
+    redrawCanvas();
+  }, [redrawCanvas]);
+  
   const getCoordinates = useCallback((e: React.MouseEvent | React.TouchEvent): Point => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return { x: 0, y: 0, timestamp: Date.now() };
+    if (!canvas || !container) return { x: 0, y: 0, pressure: 0, timestamp: Date.now() };
     
     const rect = canvas.getBoundingClientRect();
     
@@ -111,6 +125,7 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     return {
       x: clientX - rect.left,
       y: clientY - rect.top,
+      pressure: 0.5,
       timestamp: Date.now()
     };
   }, []);
@@ -277,27 +292,81 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
   }, [redrawCanvas]);
   
   return (
-    <div ref={containerRef} className="relative mb-6">
+    <div ref={containerRef} className="canvas-container">
       <canvas
         ref={canvasRef}
-        className="w-full h-[300px] border-3 border-dashed border-cbd5e1 rounded-2xl cursor-crosshair transition-all duration-300 bg-gradient-to-br from-slate-50 to-slate-100 hover:border-blue-500 hover:from-white hover:to-slate-50 hover:shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
+        id="signatureCanvas"
         onMouseDown={handleStart}
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
       />
-      {!hasSignature && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-slate-400 text-lg font-medium">请在上方绘制您的签名</span>
+      {!hasSignature && !isPlaying && (
+        <div className="canvas-placeholder">
+          请在上方绘制您的签名
         </div>
       )}
-      <div className="flex gap-4 justify-center mt-6">
-        <button
-          onClick={handleClear}
-          className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
-        >
-          清除签名
-        </button>
+      {isPlaying && (
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium text-slate-700">回放中</span>
+            <span className="text-sm text-slate-500">{progress.toFixed(1)}%</span>
+          </div>
+        </div>
+      )}
+      <div className="flex flex-col gap-4 mt-6">
+        <div className="button-group">
+          <button
+            onClick={handleClear}
+            disabled={isPlaying}
+            className="btn btn-secondary"
+          >
+            清除签名
+          </button>
+        </div>
+        {signatureData && signatureData.strokes.length > 0 && (
+          <div className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl">
+            <div className="button-group">
+              <button
+                onClick={play}
+                disabled={isPlaying && !isPaused}
+                className="btn btn-primary"
+              >
+                {isPaused ? '继续' : '播放'}
+              </button>
+              <button
+                onClick={pause}
+                disabled={!isPlaying || isPaused}
+                className="btn btn-secondary"
+              >
+                暂停
+              </button>
+              <button
+                onClick={reset}
+                disabled={!isPlaying && !isPaused}
+                className="btn btn-secondary"
+              >
+                重置
+              </button>
+            </div>
+            <div className="flex items-center gap-4 justify-center">
+              <span className="text-sm font-medium text-slate-700">回放速度:</span>
+              <select
+                value={currentSpeed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                disabled={!isPlaying && !isPaused}
+                className="px-4 py-2 border-2 border-slate-200 rounded-lg text-slate-800 bg-white cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="0.5">0.5x</option>
+                <option value="1">1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

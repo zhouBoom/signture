@@ -1,0 +1,17 @@
+{
+  "name": "project-folder",
+  "version": "1.0.0",
+  "description": "基于模式识别的手写签名身份验证应用程序，实现自动化识别与真伪鉴别功能。",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.21"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

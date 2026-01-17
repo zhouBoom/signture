@@ -1,13 +1,16 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Point, Stroke, SignatureData } from '../types';
 import { getDevicePixelRatio, calculateDistance } from '../utils/helpers';
+import { useSignatureReplay } from '../hooks/useSignatureReplay';
 
 interface SignatureCanvasProps {
   onSignatureChange: (data: SignatureData) => void;
   onClear: () => void;
+  signatureData?: SignatureData | null;
+  onReplayComplete?: () => void;
 }
 
-const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, onClear }) => {
+const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, onClear, signatureData: externalSignatureData, onReplayComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -17,6 +20,7 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
   const [startTime, setStartTime] = useState<number | null>(null);
   const [lastPoint, setLastPoint] = useState<Point | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
+  const [replayPoints, setReplayPoints] = useState<Point[]>([]);
   const dpr = useRef(getDevicePixelRatio());
   
   useEffect(() => {
@@ -50,6 +54,16 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
   useEffect(() => {
     redrawCanvas();
   }, [strokes, currentStroke]);
+
+  useEffect(() => {
+    setReplayPoints([]);
+    setReplayState({ currentStroke: [], lastPoint: null });
+  }, [externalSignatureData]);
+
+  const [replayState, setReplayState] = useState<{
+    currentStroke: Point[];
+    lastPoint: Point | null;
+  }>({ currentStroke: [], lastPoint: null });
   
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -90,7 +104,18 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
       
       ctx.stroke();
     }
-  }, [strokes, currentStroke]);
+
+    if (replayState.currentStroke.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(replayState.currentStroke[0].x, replayState.currentStroke[0].y);
+      
+      for (let i = 1; i < replayState.currentStroke.length; i++) {
+        ctx.lineTo(replayState.currentStroke[i].x, replayState.currentStroke[i].y);
+      }
+      
+      ctx.stroke();
+    }
+  }, [strokes, currentStroke, replayState]);
   
   const getCoordinates = useCallback((e: React.MouseEvent | React.TouchEvent): Point => {
     const canvas = canvasRef.current;
@@ -219,6 +244,8 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     setTotalDistance(0);
     setHasSignature(false);
     setIsDrawing(false);
+    setReplayPoints([]);
+    setReplayState({ currentStroke: [], lastPoint: null });
     
     onClear();
   }, [onClear]);
@@ -276,6 +303,84 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
     };
   }, [redrawCanvas]);
   
+  const { isPlaying, playbackSpeed, play, pause, reset, setPlaybackSpeed, setSignatureData } = useSignatureReplay({
+    onDrawPoint: (point) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      ctx.beginPath();
+      
+      if (replayState.lastPoint) {
+        ctx.moveTo(replayState.lastPoint.x, replayState.lastPoint.y);
+      } else {
+        ctx.moveTo(point.x - 0.5, point.y - 0.5);
+      }
+      
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+      
+      setReplayState(prev => ({
+        currentStroke: [...prev.currentStroke, point],
+        lastPoint: point
+      }));
+    },
+    onStrokeStart: () => {
+      setReplayState(prev => ({
+        ...prev,
+        currentStroke: []
+      }));
+    },
+    onStrokeEnd: () => {
+      setReplayState(prev => ({
+        ...prev,
+        lastPoint: null
+      }));
+    },
+    onReplayComplete: () => {
+      onReplayComplete?.();
+    }
+  });
+
+  useEffect(() => {
+    if (externalSignatureData) {
+      setSignatureData(externalSignatureData);
+    }
+  }, [externalSignatureData, setSignatureData]);
+
+  const handlePlay = () => {
+    setReplayState({ currentStroke: [], lastPoint: null });
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (canvas && container) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const rect = container.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
+      }
+    }
+    reset();
+    setTimeout(() => {
+      play();
+    }, 0);
+  };
+
+  const handleReset = () => {
+    reset();
+    setReplayState({ currentStroke: [], lastPoint: null });
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (canvas && container) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const rect = container.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
+      }
+    }
+  };
+
   return (
     <div ref={containerRef} className="relative mb-6">
       <canvas
@@ -286,12 +391,50 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({ onSignatureChange, on
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
       />
-      {!hasSignature && (
+      {!hasSignature && !externalSignatureData && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className="text-slate-400 text-lg font-medium">请在上方绘制您的签名</span>
         </div>
       )}
-      <div className="flex gap-4 justify-center mt-6">
+      <div className="flex flex-wrap gap-4 justify-center items-center mt-6">
+        {externalSignatureData && (
+          <>
+            <button
+              onClick={handlePlay}
+              disabled={isPlaying}
+              className="px-6 py-2 bg-green-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {isPlaying ? '播放中...' : '播放'}
+            </button>
+            <button
+              onClick={pause}
+              disabled={!isPlaying}
+              className="px-6 py-2 bg-yellow-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              暂停
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-6 py-2 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
+            >
+              重置
+            </button>
+            <div className="flex items-center gap-2">
+              <label className="text-slate-700 font-medium">倍速:</label>
+              <select
+                value={playbackSpeed}
+                onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                className="px-3 py-2 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value={0.5}>0.5x</option>
+                <option value={1}>1x</option>
+                <option value={1.5}>1.5x</option>
+                <option value={2}>2x</option>
+                <option value={3}>3x</option>
+              </select>
+            </div>
+          </>
+        )}
         <button
           onClick={handleClear}
           className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"

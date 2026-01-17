@@ -11,6 +11,8 @@ import useSignatureVerification from './hooks/useSignatureVerification';
 import useToast from './hooks/useToast';
 import { SignatureData, VerificationMode, VerificationRecord } from './types';
 import { generateId } from './utils/helpers';
+import SignatureReplay from './components/SignatureReplay';
+
 function App() {
  const [signatureData, setSignatureData] = useState<SignatureData | null>(null);
  const [threshold, setThreshold] = useState(85);
@@ -156,6 +158,11 @@ function App() {
  <VerificationRecords records={records}/>
  </Card>
  </div>
+ </div>
+ <div className="mt-8">
+ <Card title="签名回放" icon="▶️">
+ <SignatureReplay signatureData={signatureData} />
+ </Card>
  </div>
  </main>
  <Footer/>

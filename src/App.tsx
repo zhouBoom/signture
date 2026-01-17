@@ -98,54 +98,55 @@ function App() {
  }, [showToast]);
  useEffect(() => {
  showToast('欢迎使用动态签名验证系统！', 'success', '欢迎');
- }, []);
- return (<div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-800 to-blue-400 bg-fixed">
+ }, [showToast]);
+ return (<div className="min-h-screen">
  <Toast messages={messages} onClose={removeToast}/>
  <Header onNavigate={handleNavigate}/>
- <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
- <section className="text-center mb-10">
- <h2 className="text-4xl font-extrabold text-white mb-4 text-shadow">
+ <div className="container">
+ <main className="main">
+ <section className="section">
+ <h2 className="section-title">
  基于模式识别的动态签名验证
  </h2>
- <p className="text-xl text-white/95 max-w-3xl mx-auto">
+ <p className="section-desc">
  利用先进的模式识别技术，实现手写签名的自动化识别与真伪鉴别
  </p>
  </section>
- <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
- <div className="flex flex-col gap-6">
+ <div className="content-grid">
+ <div className="left-panel">
  <Card title="签名输入区域" icon="📝">
- <SignatureCanvas onSignatureChange={handleSignatureChange} onClear={handleClear}/>
+ <SignatureCanvas onSignatureChange={handleSignatureChange} onClear={handleClear} signatureData={signatureData} />
  </Card>
  <Card title="验证参数" icon="⚙️">
- <div className="space-y-6">
- <div>
- <label className="block font-semibold text-slate-800 mb-3">
+ <div className="form-group">
+ <label>
  匹配阈值:
  </label>
  <div className="flex items-center gap-4">
- <input type="range" min="0" max="100" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} className="flex-1 h-2 rounded-md bg-gradient-to-r from-slate-200 to-slate-300 appearance-none outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-blue-700 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-transform [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gradient-to-r [&::-moz-range-thumb]:from-blue-500 [&::-moz-range-thumb]:to-blue-700 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:hover:scale-125 [&::-moz-range-thumb]:transition-transform"/>
- <span className="font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent text-lg">
+ <input type="range" id="threshold" min="0" max="100" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}/>
+ <span className="range-value">
  {threshold}%
  </span>
  </div>
  </div>
- <div>
- <label className="block font-semibold text-slate-800 mb-3">
+ <div className="form-group">
+ <label>
  验证模式:
  </label>
- <select value={mode} onChange={handleModeChange} className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-800 bg-white cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium">
+ <select id="mode" value={mode} onChange={handleModeChange}>
  <option value="dynamic">动态模式</option>
  <option value="static">静态模式</option>
  <option value="hybrid">混合模式</option>
  </select>
  </div>
- <button onClick={handleVerify} disabled={isVerifying} className="w-full px-8 py-4 bg-gradient-to-r from-slate-600 to-slate-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+ <div className="button-group">
+ <button onClick={handleVerify} disabled={isVerifying} className="btn btn-primary">
  {isVerifying ? '验证中...' : '验证签名'}
  </button>
  </div>
  </Card>
  </div>
- <div className="flex flex-col gap-6">
+ <div className="right-panel">
  <Card title="验证结果" icon="📊">
  <ResultDisplay result={result} isVerifying={isVerifying}/>
  </Card>
@@ -158,6 +159,7 @@ function App() {
  </div>
  </div>
  </main>
+ </div>
  <Footer/>
  </div>);
 }

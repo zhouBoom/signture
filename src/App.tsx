@@ -9,6 +9,7 @@ import VerificationParams from '@/components/VerificationParams';
 import VerificationResultComponent from '@/components/VerificationResult';
 import SignatureFeaturesComponent from '@/components/SignatureFeatures';
 import VerificationRecords from '@/components/VerificationRecords';
+import SignatureReplay from '@/components/SignatureReplay';
 import Toast from '@/components/Toast';
 
 const App: React.FC = () => {
@@ -278,6 +279,11 @@ const App: React.FC = () => {
                   识别特征
                 </h3>
                 <SignatureFeaturesComponent features={signatureFeatures} />
+              </div>
+
+              {/* Signature Replay Card */}
+              <div className="glass-card">
+                <SignatureReplay signatureData={signatureData} />
               </div>
 
               {/* Verification Records Card */}

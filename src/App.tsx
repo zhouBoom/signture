@@ -5,6 +5,7 @@ import { verifySignature, calculateSignatureFeatures, generateRecordId } from '@
 
 // 导入组件
 import SignatureCanvas from '@/components/SignatureCanvas';
+import SignatureReplayDemo from '@/components/SignatureReplayDemo';
 import VerificationParams from '@/components/VerificationParams';
 import VerificationResultComponent from '@/components/VerificationResult';
 import SignatureFeaturesComponent from '@/components/SignatureFeatures';
@@ -12,7 +13,10 @@ import VerificationRecords from '@/components/VerificationRecords';
 import Toast from '@/components/Toast';
 
 const App: React.FC = () => {
-  // 状态管理
+  // 页面状态
+  const [currentPage, setCurrentPage] = useState<'home' | 'replay'>('home');
+  
+  // 原有的状态管理
   const [threshold, setThreshold] = useState<number>(85);
   const [mode, setMode] = useState<VerificationMode>('dynamic');
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
@@ -126,7 +130,11 @@ const App: React.FC = () => {
 
   // 处理导航点击
   const handleNavClick = useCallback((page: string) => {
-    if (page !== 'home') {
+    if (page === 'replay') {
+      setCurrentPage('replay');
+    } else if (page === 'home') {
+      setCurrentPage('home');
+    } else {
       const pageNames = {
         'management': '签名管理',
         'history': '历史记录',
@@ -173,6 +181,106 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [addToast]);
 
+  // 渲染首页内容
+  const renderHomePage = () => (
+    <>
+      {/* Introduction Section */}
+      <div className="section intro text-center mb-10">
+        <h2 className="section-title text-4xl font-extrabold text-white mb-4">
+          基于模式识别的动态签名验证
+        </h2>
+        <p className="section-desc text-lg text-white/95 max-w-3xl mx-auto">
+          利用先进的模式识别技术，实现手写签名的自动化识别与真伪鉴别
+        </p>
+      </div>
+
+      {/* Content Grid */}
+      <div className="content-grid grid grid-cols-1 lg:grid-cols-2 gap-7.5">
+        {/* Left Panel */}
+        <div className="left-panel flex flex-col gap-6">
+          {/* Signature Input Card */}
+          <div className="glass-card">
+            <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <span className="card-icon text-3xl">📝</span>
+              签名输入区域
+            </h3>
+            <SignatureCanvas 
+              ref={signatureCanvasRef}
+              onSignatureChange={handleSignatureChange} 
+            />
+            <div className="button-group flex gap-4 justify-center">
+              <button
+                className="btn-primary"
+                onClick={handleClearSignature}
+              >
+                清除签名
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={handleVerifySignature}
+                disabled={isVerifying}
+              >
+                {isVerifying ? '验证中...' : '验证签名'}
+              </button>
+            </div>
+          </div>
+
+          {/* Verification Parameters Card */}
+          <div className="glass-card">
+            <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <span className="card-icon text-3xl">⚙️</span>
+              验证参数
+            </h3>
+            <VerificationParams
+              threshold={threshold}
+              mode={mode}
+              onThresholdChange={handleThresholdChange}
+              onModeChange={handleModeChange}
+            />
+          </div>
+        </div>
+
+        {/* Right Panel */}
+        <div className="right-panel flex flex-col gap-6">
+          {/* Verification Result Card */}
+          <div className="glass-card">
+            <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <span className="card-icon text-3xl">📊</span>
+              验证结果
+            </h3>
+            <VerificationResultComponent
+              result={verificationResult}
+              isVerifying={isVerifying}
+            />
+          </div>
+
+          {/* Signature Features Card */}
+          <div className="glass-card">
+            <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <span className="card-icon text-3xl">🔍</span>
+              识别特征
+            </h3>
+            <SignatureFeaturesComponent features={signatureFeatures} />
+          </div>
+
+          {/* Verification Records Card */}
+          <div className="glass-card">
+            <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+              <span className="card-icon text-3xl">📋</span>
+              最近验证记录
+            </h3>
+            <VerificationRecords records={verificationRecords} />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  // 渲染签名回放页面
+  const renderReplayPage = () => (
+    <SignatureReplayDemo />
+  );
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -184,8 +292,19 @@ const App: React.FC = () => {
               签名验证系统
             </h1>
             <nav className="nav flex gap-2.5">
-              <a href="#" className="nav-link active" onClick={(e) => { e.preventDefault(); handleNavClick('home'); }}>
+              <a 
+                href="#" 
+                className={`nav-link ${currentPage === 'home' ? 'active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); handleNavClick('home'); }}
+              >
                 首页
+              </a>
+              <a 
+                href="#" 
+                className={`nav-link ${currentPage === 'replay' ? 'active' : ''}`} 
+                onClick={(e) => { e.preventDefault(); handleNavClick('replay'); }}
+              >
+                签名回放
               </a>
               <a href="#" className="nav-link" onClick={(e) => { e.preventDefault(); handleNavClick('management'); }}>
                 签名管理
@@ -201,95 +320,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="main py-10">
         <div className="container mx-auto px-5">
-          {/* Introduction Section */}
-          <div className="section intro text-center mb-10">
-            <h2 className="section-title text-4xl font-extrabold text-white mb-4">
-              基于模式识别的动态签名验证
-            </h2>
-            <p className="section-desc text-lg text-white/95 max-w-3xl mx-auto">
-              利用先进的模式识别技术，实现手写签名的自动化识别与真伪鉴别
-            </p>
-          </div>
-
-          {/* Content Grid */}
-          <div className="content-grid grid grid-cols-1 lg:grid-cols-2 gap-7.5">
-            {/* Left Panel */}
-            <div className="left-panel flex flex-col gap-6">
-              {/* Signature Input Card */}
-              <div className="glass-card">
-                <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="card-icon text-3xl">📝</span>
-                  签名输入区域
-                </h3>
-                <SignatureCanvas 
-                  ref={signatureCanvasRef}
-                  onSignatureChange={handleSignatureChange} 
-                />
-                <div className="button-group flex gap-4 justify-center">
-                  <button
-                    className="btn-primary"
-                    onClick={handleClearSignature}
-                  >
-                    清除签名
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    onClick={handleVerifySignature}
-                    disabled={isVerifying}
-                  >
-                    {isVerifying ? '验证中...' : '验证签名'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Verification Parameters Card */}
-              <div className="glass-card">
-                <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="card-icon text-3xl">⚙️</span>
-                  验证参数
-                </h3>
-                <VerificationParams
-                  threshold={threshold}
-                  mode={mode}
-                  onThresholdChange={handleThresholdChange}
-                  onModeChange={handleModeChange}
-                />
-              </div>
-            </div>
-
-            {/* Right Panel */}
-            <div className="right-panel flex flex-col gap-6">
-              {/* Verification Result Card */}
-              <div className="glass-card">
-                <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="card-icon text-3xl">📊</span>
-                  验证结果
-                </h3>
-                <VerificationResultComponent
-                  result={verificationResult}
-                  isVerifying={isVerifying}
-                />
-              </div>
-
-              {/* Signature Features Card */}
-              <div className="glass-card">
-                <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="card-icon text-3xl">🔍</span>
-                  识别特征
-                </h3>
-                <SignatureFeaturesComponent features={signatureFeatures} />
-              </div>
-
-              {/* Verification Records Card */}
-              <div className="glass-card">
-                <h3 className="card-title text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="card-icon text-3xl">📋</span>
-                  最近验证记录
-                </h3>
-                <VerificationRecords records={verificationRecords} />
-              </div>
-            </div>
-          </div>
+          {currentPage === 'home' ? renderHomePage() : renderReplayPage()}
         </div>
       </main>
 

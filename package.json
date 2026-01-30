@@ -1,17 +1,29 @@
 {
-  "name": "project-folder",
-  "version": "1.0.0",
-  "description": "基于模式识别的手写签名身份验证应用程序，实现自动化识别与真伪鉴别功能。",
+  "name": "signature-validation-system",
+  "version": "2.0.0",
+  "description": "基于React 18 + TypeScript + Tailwind CSS的高性能动态签名验证系统",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.3",
     "vite": "^5.4.21"
   },
-  "keywords": [],
+  "keywords": ["signature", "validation", "react", "typescript", "canvas"],
   "author": "",
-  "license": "ISC"
+  "license": "MIT"
 }
